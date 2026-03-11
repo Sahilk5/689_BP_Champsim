@@ -33,8 +33,8 @@ class hashed_perceptron : champsim::modules::branch_predictor
 
   //updated array values with 12 entries
   constexpr static std::array<bits, NTABLES> history_lengths = {
-    bits{},   MINHIST,  bits{5},  bits{8},  bits{13},  bits{21},  
-    bits{34}, bits{55}, bits{89}, bits{144}, bits{233}, MAXHIST
+    bits{},   MINHIST,  bits{5},  bits{7},  bits{11},  bits{17},  
+    bits{26}, bits{41}, bits{863}, bits{97}, bits{150}, MAXHIST
   };
 
   // tables of 8-bit weights
