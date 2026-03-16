@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstddef>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -10,29 +10,36 @@
 class Discriminator {
 private:
     std::vector<RamNode> ram_nodes;
-//    uint32_t num_nodes;
+
 public:
-    Discriminator(uint32_t num_ram_nodes, uint8_t counter_bits) {
+    Discriminator(uint32_t num_ram_nodes, uint8_t tuple_bits, uint8_t counter_bits) {
         ram_nodes.reserve(num_ram_nodes);
-        for (uint32_t i = 0; i < num_ram_nodes; i++) {
-            ram_nodes.emplace_back(counter_bits);
+        for (uint32_t i = 0; i < num_ram_nodes; ++i) {
+            ram_nodes.emplace_back(tuple_bits, counter_bits);
         }
     }
 
-    void train(std::vector<uint64_t>& addresses) {
-        assert(addresses.size() == ram_nodes.size()); // Need to check if all ram nodes are to be accessed 
-        for (uint32_t i = 0; i < ram_nodes.size(); i++) {
+    void train(const std::vector<uint64_t>& addresses) {
+        // One address per RAM node in the discriminator.
+        assert(addresses.size() == ram_nodes.size());
+        for (std::size_t i = 0; i < ram_nodes.size(); ++i) {
             ram_nodes[i].train(addresses[i]);
         }
     }
 
-    uint32_t get_response(std::vector<uint64_t> &addresses, uint32_t bleach_threshold) const {
-        assert(addresses.size() == ram_nodes.size()); // Need to check if all ram nodes are to be accessed 
+    uint32_t get_response(const std::vector<uint64_t>& addresses, uint32_t bleach_threshold) const {
+        assert(addresses.size() == ram_nodes.size());
         uint32_t sum = 0;
-        for(uint32_t i = 0; i < ram_nodes.size(); i++) {
+        for (std::size_t i = 0; i < ram_nodes.size(); ++i) {
+            // Response is the number of RAM nodes that survive bleaching.
             sum += ram_nodes[i].read_bleached(addresses[i], bleach_threshold);
         }
         return sum;
     }
+
+    std::size_t size() const {
+        return ram_nodes.size();
+    }
+};
     
 };
