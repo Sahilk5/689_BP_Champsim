@@ -1,38 +1,45 @@
 #pragma once
 
-#include <cstdint>
-#include <unordered_map>
+#include <cassert>
 #include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <vector>
 
 class RamNode {
 private:
-    std::unordered_map<uint64_t, uint32_t> storage; // address to counter
-    uint32_t max_count; // 2^ctr_bits - 1
+    std::vector<uint32_t> counters;
+    uint32_t max_count;
+    // Only the low tuple_bits are used to index this RAM node.
+    uint64_t address_mask;
+
 public:
-    RamNode(uint8_t counter_bits) : max_count(counter_bits >= 32 ? 0xFFFFFFFFu :(1u <<counter_bits) - 1u) {}
+    RamNode(uint8_t tuple_bits, uint8_t counter_bits)
+        : counters(std::size_t{1} << tuple_bits, 0),
+          max_count(counter_bits >= 32 ? std::numeric_limits<uint32_t>::max()
+                                       : ((uint32_t{1} << counter_bits) - 1)),
+          address_mask(tuple_bits >= 64 ? std::numeric_limits<uint64_t>::max()
+                                        : ((uint64_t{1} << tuple_bits) - 1)) {
+        assert(tuple_bits < std::numeric_limits<std::size_t>::digits);
+    }
 
-    //train
-    void train(uint64_t addr) {
-        if (storage[addr] < max_count) {
-            storage[addr]++;
+    void train(uint64_t address) {
+        // Saturating counter update for the selected tuple entry.
+        uint32_t& ctr = counters[address & address_mask];
+        if (ctr < max_count) {
+            ++ctr;
         }
     }
 
-    //getters
-/*
-    uint32_t read_counter(uint64_t addr) const {
-        auto it = storage.find(addr);
-        if(it != storage.end()) {
-            return it->second;
-        } else {
-            return 0;
-        }
-    }
-*/    
     uint8_t read_bleached(uint64_t address, uint32_t threshold) const {
-        auto it = storage.find(address);
-        if (it == storage.end())
-            return 0;
-        return (it->second > threshold ? 1 : 0);
+        return counters[address & address_mask] > threshold ? 1u : 0u;
+    }
+
+    uint32_t read_counter(uint64_t address) const {
+        return counters[address & address_mask];
+    }
+
+    std::size_t size() const {
+        return counters.size();
     }
 };
