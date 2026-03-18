@@ -13,14 +13,13 @@ CONFIG_PATH="${CONFIG_PATH:-$REPO_DIR/champsim_config.json}"
 BUILD_LOG_DIR="${BUILD_LOG_DIR:-$REPO_DIR/build_logs}"
 BUILD_ROOT="${BUILD_ROOT:-$REPO_DIR/builds}"
 BUDGETS="${BUDGETS:-24 48 96 192 384 768 1536}"
-MODULES="${MODULES:-GCC/13.2.0 CMake/3.31.8}"
+MODULES="${MODULES:-GCC/13.2.0;CMake/3.31.8}"
 
 mkdir -p "$BUILD_LOG_DIR"
 cd "$REPO_DIR"
 
 if [[ -n "$MODULES" ]]; then
-  # shellcheck disable=SC2206
-  module_list=($MODULES)
+  IFS=';' read -r -a module_list <<< "$MODULES"
   if ! type module >/dev/null 2>&1; then
     for init_script in /etc/profile.d/modules.sh /etc/profile.d/lmod.sh /usr/share/Modules/init/bash /usr/share/lmod/lmod/init/bash; do
       if [[ -r "$init_script" ]]; then

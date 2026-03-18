@@ -132,10 +132,11 @@ SBATCH_COMMON+=(--get-user-env)
 
 MODULES_STR=""
 if (( ${#MODULES[@]} > 0 )); then
-  MODULES_STR="${MODULES[*]}"
+  printf -v MODULES_STR '%s;' "${MODULES[@]}"
+  MODULES_STR="${MODULES_STR%;}"
 fi
 
-BUILD_JOB_ID="$(
+if ! BUILD_JOB_ID="$(
   sbatch --parsable \
     "${SBATCH_COMMON[@]}" \
     --cpus-per-task "$BUILD_CPUS" \
@@ -145,9 +146,12 @@ BUILD_JOB_ID="$(
     --error "$RUN_DIR/logs/build_%j.err" \
     --export=ALL,REPO_DIR="$REPO_DIR",CONFIG_PATH="$CONFIG_PATH",BUILD_LOG_DIR="$RUN_DIR/build_logs",BUILD_ROOT="$BUILD_ROOT",MODULES="$MODULES_STR" \
     "$REPO_DIR/scripts/slurm_build_hashed_sweep.sbatch"
-)"
+)"; then
+  echo "Error: failed to submit build job." >&2
+  exit 1
+fi
 
-RUN_JOB_ID="$(
+if ! RUN_JOB_ID="$(
   sbatch --parsable \
     "${SBATCH_COMMON[@]}" \
     --dependency "afterok:$BUILD_JOB_ID" \
@@ -159,7 +163,10 @@ RUN_JOB_ID="$(
     --error "$RUN_DIR/logs/hash_%A_%a.err" \
     --export=ALL,REPO_DIR="$REPO_DIR",TRACE_DIR="$TRACE_DIR",RUN_DIR="$RUN_DIR",BUILD_ROOT="$BUILD_ROOT",BENCH_LIST="$BENCH_LIST",WARMUP_INS="$WARMUP_INS",SIM_INS="$SIM_INS",MODULES="$MODULES_STR" \
     "$REPO_DIR/scripts/slurm_run_hashed_sweep.sbatch"
-)"
+)"; then
+  echo "Error: failed to submit run array." >&2
+  exit 1
+fi
 
 echo "Submitted build job: $BUILD_JOB_ID"
 echo "Submitted run array: $RUN_JOB_ID"

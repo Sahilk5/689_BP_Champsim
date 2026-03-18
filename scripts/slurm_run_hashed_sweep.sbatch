@@ -15,13 +15,12 @@ BUILD_ROOT="${BUILD_ROOT:-$REPO_DIR/builds}"
 BENCH_LIST="${BENCH_LIST:-$REPO_DIR/scripts/bench_lists/spec2017_branch_20.txt}"
 WARMUP_INS="${WARMUP_INS:-200000000}"
 SIM_INS="${SIM_INS:-1000000000}"
-MODULES="${MODULES:-GCC/13.2.0 CMake/3.31.8}"
+MODULES="${MODULES:-GCC/13.2.0;CMake/3.31.8}"
 
 BUDGETS=(24 48 96 192 384 768 1536)
 
 if [[ -n "$MODULES" ]]; then
-  # shellcheck disable=SC2206
-  module_list=($MODULES)
+  IFS=';' read -r -a module_list <<< "$MODULES"
   if ! type module >/dev/null 2>&1; then
     for init_script in /etc/profile.d/modules.sh /etc/profile.d/lmod.sh /usr/share/Modules/init/bash /usr/share/lmod/lmod/init/bash; do
       if [[ -r "$init_script" ]]; then
