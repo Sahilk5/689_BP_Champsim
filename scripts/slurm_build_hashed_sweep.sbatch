@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=hash_build
-#SBATCH --get-user-env=L
+#SBATCH --get-user-env
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G

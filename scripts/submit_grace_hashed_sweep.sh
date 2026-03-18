@@ -125,7 +125,7 @@ BENCH_COUNT="$(grep -vcE '^[[:space:]]*(#|$)' "$BENCH_LIST")"
 ARRAY_MAX=$((BENCH_COUNT * 7 - 1))
 
 SBATCH_COMMON=()
-SBATCH_COMMON+=(--get-user-env=L)
+SBATCH_COMMON+=(--get-user-env)
 [[ -n "$PARTITION" ]] && SBATCH_COMMON+=(--partition "$PARTITION")
 [[ -n "$ACCOUNT" ]] && SBATCH_COMMON+=(--account "$ACCOUNT")
 [[ -n "$QOS" ]] && SBATCH_COMMON+=(--qos "$QOS")
