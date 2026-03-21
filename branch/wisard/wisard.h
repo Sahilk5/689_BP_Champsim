@@ -10,7 +10,7 @@
 #include <algorithm>
 
 #include "modules.h"
-#include "discriminators.h"
+#include "discriminator.h"
 #include "msl/bits.h"
 #include "msl/fwcounter.h"
 
@@ -63,3 +63,5 @@ public:
     bool predict_branch(champsim::address pc);
     void last_branch_result(champsim::address pc, champsim::address branch_target, bool taken, uint8_t branch_type);
 }
+
+#endif
