@@ -41,5 +41,3 @@ public:
         return ram_nodes.size();
     }
 };
-    
-};
