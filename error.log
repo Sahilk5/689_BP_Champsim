@@ -1,0 +1,1 @@
+g++ @global.options @absolute.options -I.csconfig  -c -o .csconfig/generated_environment.o src/generated_environment.cc

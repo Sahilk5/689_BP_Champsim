@@ -2,11 +2,13 @@
 
 //instantiate the predictor class 
 //WIP
-wisard_predictor::wisard_predictor() 
-    : champsim::modules::branch_predictor(),
+wisard::wisard(O3_CPU* cpu) 
+    : champsim::modules::branch_predictor(cpu),
       disc_taken(NUM_RAM_NODES, TUPLE_BITS, COUNTER_BITS),
       disc_not_taken(NUM_RAM_NODES, TUPLE_BITS, COUNTER_BITS) 
 {
+    (void)cpu;
+
     for (uint32_t size : LHT_SIZES) {
         lhts.push_back(std::vector<uint32_t>(size, 0));
     }
@@ -36,7 +38,7 @@ wisard_predictor::wisard_predictor()
     }
 }
 
-std::vector<uint64_t> wisard_predictor::compute_ram_addresses(uint64_t pc){
+std::vector<uint64_t> wisard::compute_ram_addresses(champsim::address pc){
     //architectural information
     uint64_t pc_24 = pc_addr.slice_lower<champsim::data::bits{PC_LENGTH}>().to<uint64_t>();
     uint64_t ghr_24 = spec_global_history.to_ullong(); 
@@ -46,7 +48,8 @@ std::vector<uint64_t> wisard_predictor::compute_ram_addresses(uint64_t pc){
     uint64_t lhr2 = lhts[2][pc_24 % LHT_SIZES[2]] & 0x1FF;    
     uint64_t lhr3 = lhts[3][pc_24 % LHT_SIZES[3]] & 0x7F;     
     uint64_t lhr4 = lhts[4][pc_24 % LHT_SIZES[4]] & 0x1F;
-    
+
+    std::vector<uint64_t> addresses;    
     std::bitset<2158> input_vector;
     int offset = 0;
 
@@ -88,7 +91,7 @@ std::vector<uint64_t> wisard_predictor::compute_ram_addresses(uint64_t pc){
 
 }
 
-bool wisard_predictor::apply_bleaching(const std::vector<uint64_t>& addresses){
+bool wisard::apply_bleaching(const std::vector<uint64_t>& addresses){
     uint32_t b = 2; 
     uint32_t max_val = (1 << COUNTER_BITS) - 1;
 
@@ -103,7 +106,7 @@ bool wisard_predictor::apply_bleaching(const std::vector<uint64_t>& addresses){
     return false;
 }
 
-bool wisard_predictor::predict_branch(champsim::address pc){
+bool wisard::predict_branch(champsim::address pc){
 
     last_result.addresses = compute_ram_addresses(pc);
     last_result.sum_not_taken = disc_not_taken.get_response(last_result.addresses, 1);
@@ -124,7 +127,7 @@ bool wisard_predictor::predict_branch(champsim::address pc){
     return last_result.prediction;
 }
 
-void wisard_predictor::last_branch_result(champsim::address pc_addr, champsim::address branch_target, bool taken, uint8_t branch_type){
+void wisard::last_branch_result(champsim::address pc_addr, champsim::address branch_target, bool taken, uint8_t branch_type){
 
     uint64_t pc = pc_addr.to<uint64_t>();
 
@@ -155,5 +158,5 @@ void wisard_predictor::last_branch_result(champsim::address pc_addr, champsim::a
     global_path_history <<= PC_BITS_TO_SHIFT;
     uint64_t pc_bits = pc_addr.slice_lower<champsim::data::bits{PC_BITS_TO_SHIFT}>().to<uint64_t>();
     global_path_history ^= pc_bits;
-    global_path_history &= ((1ULL << PATH_HISTORY_LENGTH) - 1);
+    global_path_history &= ((1ULL << GPHR_LENGTH) - 1);
 }

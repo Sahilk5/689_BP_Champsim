@@ -13,8 +13,12 @@
 #include "discriminator.h"
 #include "msl/bits.h"
 #include "msl/fwcounter.h"
+#include "ooo_cpu.h"
+#include "msl/lru_table.h"
 
-class wisard : public champsim::modules::branch_predictor {
+class O3_CPU;
+
+class wisard : champsim::modules::branch_predictor {
 private:
     //hardware knobs
     //this specific config is equal to 64KB
@@ -36,7 +40,8 @@ private:
     //lengths 24, 16, 9, 7, 5
     constexpr static uint32_t NUM_LHTS = 5;
     constexpr static std::array<uint32_t, NUM_LHTS> LHT_SIZES = {1024, 1024, 1024, 1024, 1024};
-    std::vector<std::vector<uint32_t>> lhts;
+    //std::vector<std::vector<uint32_t>> lhts;
+    std::vector<std::vector<std::bitset<COUNTER_BITS>>> lhts;
 
     //architectural states
     std::bitset<GHR_LENGTH> spec_global_history;
@@ -55,13 +60,13 @@ private:
 
     wisard_result last_result;
 
-    td::vector<uint64_t> compute_ram_addresses(champsim::address pc);
+    std::vector<uint64_t> compute_ram_addresses(champsim::address pc);
     bool apply_bleaching(const std::vector<uint64_t>& addresses);
 
 public:
-    wisard_predictor();
+    wisard(O3_CPU* cpu);
     bool predict_branch(champsim::address pc);
     void last_branch_result(champsim::address pc, champsim::address branch_target, bool taken, uint8_t branch_type);
-}
+};
 
 #endif
