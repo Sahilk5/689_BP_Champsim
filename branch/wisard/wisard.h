@@ -1,24 +1,22 @@
 #ifndef BRANCH_WISARD_H
 #define BRANCH_WISARD_H
 
-#include <vector>
-#include <cstdint>
 #include <array>
-#include<bitset>
+#include <algorithm>
+#include <bitset>
+#include <cstdint>
 #include <numeric>
 #include <random>
-#include <algorithm>
+#include <vector>
 
 #include "modules.h"
 #include "discriminator.h"
 #include "msl/bits.h"
 #include "msl/fwcounter.h"
-#include "ooo_cpu.h"
-#include "msl/lru_table.h"
 
 class O3_CPU;
 
-class wisard : champsim::modules::branch_predictor {
+class wisard : public champsim::modules::branch_predictor {
 private:
     //hardware knobs
     //this specific config is equal to 64KB
@@ -40,8 +38,8 @@ private:
     //lengths 24, 16, 9, 7, 5
     constexpr static uint32_t NUM_LHTS = 5;
     constexpr static std::array<uint32_t, NUM_LHTS> LHT_SIZES = {1024, 1024, 1024, 1024, 1024};
-    //std::vector<std::vector<uint32_t>> lhts;
-    std::vector<std::vector<std::bitset<COUNTER_BITS>>> lhts;
+    constexpr static std::array<uint32_t, NUM_LHTS> LHT_LENGTHS = {24, 16, 9, 7, 5};
+    std::vector<std::vector<uint32_t>> lhts;
 
     //architectural states
     std::bitset<GHR_LENGTH> spec_global_history;

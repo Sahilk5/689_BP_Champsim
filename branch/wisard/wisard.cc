@@ -40,7 +40,7 @@ wisard::wisard(O3_CPU* cpu)
 
 std::vector<uint64_t> wisard::compute_ram_addresses(champsim::address pc){
     //architectural information
-    uint64_t pc_24 = pc_addr.slice_lower<champsim::data::bits{PC_LENGTH}>().to<uint64_t>();
+    uint64_t pc_24 = pc.slice_lower<champsim::data::bits{PC_LENGTH}>().to<uint64_t>();
     uint64_t ghr_24 = spec_global_history.to_ullong(); 
     uint64_t pc_xor_ghr = pc_24 ^ ghr_24;
     uint64_t lhr0 = lhts[0][pc_24 % LHT_SIZES[0]] & 0xFFFFFF; 
@@ -49,7 +49,7 @@ std::vector<uint64_t> wisard::compute_ram_addresses(champsim::address pc){
     uint64_t lhr3 = lhts[3][pc_24 % LHT_SIZES[3]] & 0x7F;     
     uint64_t lhr4 = lhts[4][pc_24 % LHT_SIZES[4]] & 0x1F;
 
-    std::vector<uint64_t> addresses;    
+    std::vector<uint64_t> addresses(NUM_RAM_NODES);
     std::bitset<2158> input_vector;
     int offset = 0;
 
@@ -150,8 +150,9 @@ void wisard::last_branch_result(champsim::address pc_addr, champsim::address bra
     //update local histories
     for (uint32_t i = 0; i < NUM_LHTS; i++) {
         uint64_t lht_idx = pc % LHT_SIZES[i];
-        lhts[i][lht_idx] <<= 1;
-        lhts[i][lht_idx].set(0, taken);
+        uint32_t width = LHT_LENGTHS[i];
+        uint32_t mask = (width >= 32) ? 0xFFFFFFFFu : ((uint32_t{1} << width) - 1);
+        lhts[i][lht_idx] = ((lhts[i][lht_idx] << 1) | (taken ? 1u : 0u)) & mask;
     }
 
     //update GPHR
