@@ -37,6 +37,12 @@ public:
         return sum;
     }
 
+    void decay() {
+        for (RamNode& node : ram_nodes) {
+            node.decay();
+        }
+    }
+
     std::size_t size() const {
         return ram_nodes.size();
     }

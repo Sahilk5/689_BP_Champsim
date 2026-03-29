@@ -23,6 +23,7 @@ private:
     constexpr static uint32_t NUM_RAM_NODES = 64;
     constexpr static uint8_t TUPLE_BITS = 10;
     constexpr static uint8_t COUNTER_BITS = 8;
+    constexpr static uint64_t DECAY_INTERVAL = 1ULL << 18;
 
     //history knobs
     constexpr static std::size_t PC_LENGTH = 24;
@@ -57,6 +58,7 @@ private:
     };
 
     wisard_result last_result;
+    uint64_t branches_since_decay = 0;
 
     std::vector<uint64_t> compute_ram_addresses(champsim::address pc);
     bool apply_bleaching(const std::vector<uint64_t>& addresses);

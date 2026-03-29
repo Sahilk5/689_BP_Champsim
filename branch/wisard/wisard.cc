@@ -131,6 +131,12 @@ void wisard::last_branch_result(champsim::address pc_addr, champsim::address bra
 
     uint64_t pc = pc_addr.to<uint64_t>();
 
+    if (++branches_since_decay >= DECAY_INTERVAL) {
+        disc_taken.decay();
+        disc_not_taken.decay();
+        branches_since_decay = 0;
+    }
+
     //train
     if (taken) {
         disc_taken.train(last_result.addresses);

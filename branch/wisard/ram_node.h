@@ -35,6 +35,12 @@ public:
         return counters[address & address_mask] > threshold ? 1u : 0u;
     }
 
+    void decay() {
+        for (uint32_t& ctr : counters) {
+            ctr >>= 1;
+        }
+    }
+
     uint32_t read_counter(uint64_t address) const {
         return counters[address & address_mask];
     }
