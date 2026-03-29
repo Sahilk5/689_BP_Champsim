@@ -92,7 +92,7 @@ std::vector<uint64_t> wisard::compute_ram_addresses(champsim::address pc){
 }
 
 bool wisard::apply_bleaching(const std::vector<uint64_t>& addresses){
-    uint32_t b = 2; 
+    uint32_t b = 1; 
     uint32_t max_val = (1 << COUNTER_BITS) - 1;
 
     while (b <= max_val) {
@@ -109,8 +109,8 @@ bool wisard::apply_bleaching(const std::vector<uint64_t>& addresses){
 bool wisard::predict_branch(champsim::address pc){
 
     last_result.addresses = compute_ram_addresses(pc);
-    last_result.sum_not_taken = disc_not_taken.get_response(last_result.addresses, 1);
-    last_result.sum_taken = disc_taken.get_response(last_result.addresses, 1);
+    last_result.sum_not_taken = disc_not_taken.get_response(last_result.addresses, 0);
+    last_result.sum_taken = disc_taken.get_response(last_result.addresses, 0);
 
     if (last_result.sum_taken > last_result.sum_not_taken) {
         last_result.prediction = true;
