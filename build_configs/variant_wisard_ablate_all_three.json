@@ -1,0 +1,8 @@
+{
+  "executable_name": "champsim_wisard_ablate_all_three",
+  "ooo_cpu": [
+    {
+      "branch_predictor": "wisard_ablate_all_three"
+    }
+  ]
+}
