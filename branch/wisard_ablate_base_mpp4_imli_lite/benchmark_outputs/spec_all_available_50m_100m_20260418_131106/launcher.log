@@ -1,0 +1,32 @@
+[Sat Apr 18 13:11:06 CDT 2026] Starting variant batch
+[Sat Apr 18 13:11:06 CDT 2026] Variant: wisard_ablate_base_mpp4_imli_lite
+[Sat Apr 18 13:11:06 CDT 2026] Warmup: 50000000
+[Sat Apr 18 13:11:06 CDT 2026] Simulation: 100000000
+[Sat Apr 18 13:11:06 CDT 2026] Trace dir: /mnt/c/Users/Sahil Kaushal/Documents/Projects/689_BP_Champsim/dpc3_traces
+[Sat Apr 18 13:11:06 CDT 2026] Trace count: 11
+[Sat Apr 18 13:11:06 CDT 2026] Output dir: /tmp/WNN_BP_nospace/branch/wisard_ablate_base_mpp4_imli_lite/benchmark_outputs/spec_all_available_50m_100m_20260418_131106
+[Sat Apr 18 13:11:06 CDT 2026] Binary: champsim_wisard_ablate_base_mpp4_imli_lite
+[Sat Apr 18 13:11:06 CDT 2026] Traces: 602.gcc_s-734B.champsimtrace.xz 603.bwaves_s-3699B.champsimtrace.xz 605.mcf_s-665B.champsimtrace.xz 607.cactuBSSN_s-2421B.champsimtrace.xz 619.lbm_s-2676B.champsimtrace.xz 621.wrf_s-575B.champsimtrace.xz 623.xalancbmk_s-700B.champsimtrace.xz 638.imagick_s-10316B.champsimtrace.xz 649.fotonik3d_s-1176B.champsimtrace.xz 649.fotonik3d_s-1B.champsimtrace.xz 654.roms_s-842B.champsimtrace.xz
+[Sat Apr 18 13:11:06 CDT 2026] Running champsim_wisard_ablate_base_mpp4_imli_lite__602.gcc_s-734B
+[Sat Apr 18 13:11:06 CDT 2026] Running champsim_wisard_ablate_base_mpp4_imli_lite__603.bwaves_s-3699B
+[Sat Apr 18 13:11:06 CDT 2026] Running champsim_wisard_ablate_base_mpp4_imli_lite__605.mcf_s-665B
+[Sat Apr 18 13:11:06 CDT 2026] Running champsim_wisard_ablate_base_mpp4_imli_lite__607.cactuBSSN_s-2421B
+[Sat Apr 18 13:11:06 CDT 2026] Running champsim_wisard_ablate_base_mpp4_imli_lite__619.lbm_s-2676B
+[Sat Apr 18 13:11:06 CDT 2026] Running champsim_wisard_ablate_base_mpp4_imli_lite__621.wrf_s-575B
+[Sat Apr 18 13:11:06 CDT 2026] Running champsim_wisard_ablate_base_mpp4_imli_lite__623.xalancbmk_s-700B
+[Sat Apr 18 13:11:06 CDT 2026] Running champsim_wisard_ablate_base_mpp4_imli_lite__638.imagick_s-10316B
+[Sat Apr 18 13:11:06 CDT 2026] Running champsim_wisard_ablate_base_mpp4_imli_lite__649.fotonik3d_s-1176B
+[Sat Apr 18 13:11:06 CDT 2026] Running champsim_wisard_ablate_base_mpp4_imli_lite__649.fotonik3d_s-1B
+[Sat Apr 18 13:11:06 CDT 2026] Running champsim_wisard_ablate_base_mpp4_imli_lite__654.roms_s-842B
+[Sat Apr 18 13:27:55 CDT 2026] champsim_wisard_ablate_base_mpp4_imli_lite__638.imagick_s-10316B exit=0
+[Sat Apr 18 13:29:49 CDT 2026] champsim_wisard_ablate_base_mpp4_imli_lite__603.bwaves_s-3699B exit=0
+[Sat Apr 18 13:29:50 CDT 2026] champsim_wisard_ablate_base_mpp4_imli_lite__654.roms_s-842B exit=0
+[Sat Apr 18 13:31:52 CDT 2026] champsim_wisard_ablate_base_mpp4_imli_lite__621.wrf_s-575B exit=0
+[Sat Apr 18 13:32:53 CDT 2026] champsim_wisard_ablate_base_mpp4_imli_lite__649.fotonik3d_s-1B exit=0
+[Sat Apr 18 13:35:04 CDT 2026] champsim_wisard_ablate_base_mpp4_imli_lite__623.xalancbmk_s-700B exit=0
+[Sat Apr 18 13:37:47 CDT 2026] champsim_wisard_ablate_base_mpp4_imli_lite__607.cactuBSSN_s-2421B exit=0
+[Sat Apr 18 13:42:31 CDT 2026] champsim_wisard_ablate_base_mpp4_imli_lite__602.gcc_s-734B exit=0
+[Sat Apr 18 13:42:40 CDT 2026] champsim_wisard_ablate_base_mpp4_imli_lite__619.lbm_s-2676B exit=0
+[Sat Apr 18 13:43:47 CDT 2026] champsim_wisard_ablate_base_mpp4_imli_lite__605.mcf_s-665B exit=0
+[Sat Apr 18 13:45:55 CDT 2026] champsim_wisard_ablate_base_mpp4_imli_lite__649.fotonik3d_s-1176B exit=0
+[Sat Apr 18 13:45:55 CDT 2026] Batch exit=0
