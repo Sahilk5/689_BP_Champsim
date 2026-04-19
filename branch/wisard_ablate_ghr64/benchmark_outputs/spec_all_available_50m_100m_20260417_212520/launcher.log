@@ -1,0 +1,32 @@
+[Fri Apr 17 21:25:20 CDT 2026] Starting variant batch
+[Fri Apr 17 21:25:20 CDT 2026] Variant: wisard_ablate_ghr64
+[Fri Apr 17 21:25:20 CDT 2026] Warmup: 50000000
+[Fri Apr 17 21:25:20 CDT 2026] Simulation: 100000000
+[Fri Apr 17 21:25:20 CDT 2026] Trace dir: /mnt/c/Users/Sahil Kaushal/Documents/Projects/689_BP_Champsim/dpc3_traces
+[Fri Apr 17 21:25:20 CDT 2026] Trace count: 11
+[Fri Apr 17 21:25:20 CDT 2026] Output dir: /tmp/WNN_BP_nospace/branch/wisard_ablate_ghr64/benchmark_outputs/spec_all_available_50m_100m_20260417_212520
+[Fri Apr 17 21:25:20 CDT 2026] Binary: champsim_wisard_ablate_ghr64
+[Fri Apr 17 21:25:20 CDT 2026] Traces: 602.gcc_s-734B.champsimtrace.xz 603.bwaves_s-3699B.champsimtrace.xz 605.mcf_s-665B.champsimtrace.xz 607.cactuBSSN_s-2421B.champsimtrace.xz 619.lbm_s-2676B.champsimtrace.xz 621.wrf_s-575B.champsimtrace.xz 623.xalancbmk_s-700B.champsimtrace.xz 638.imagick_s-10316B.champsimtrace.xz 649.fotonik3d_s-1176B.champsimtrace.xz 649.fotonik3d_s-1B.champsimtrace.xz 654.roms_s-842B.champsimtrace.xz
+[Fri Apr 17 21:25:20 CDT 2026] Running champsim_wisard_ablate_ghr64__602.gcc_s-734B
+[Fri Apr 17 21:25:20 CDT 2026] Running champsim_wisard_ablate_ghr64__603.bwaves_s-3699B
+[Fri Apr 17 21:25:20 CDT 2026] Running champsim_wisard_ablate_ghr64__605.mcf_s-665B
+[Fri Apr 17 21:25:20 CDT 2026] Running champsim_wisard_ablate_ghr64__607.cactuBSSN_s-2421B
+[Fri Apr 17 21:25:20 CDT 2026] Running champsim_wisard_ablate_ghr64__621.wrf_s-575B
+[Fri Apr 17 21:25:20 CDT 2026] Running champsim_wisard_ablate_ghr64__619.lbm_s-2676B
+[Fri Apr 17 21:25:20 CDT 2026] Running champsim_wisard_ablate_ghr64__623.xalancbmk_s-700B
+[Fri Apr 17 21:25:20 CDT 2026] Running champsim_wisard_ablate_ghr64__638.imagick_s-10316B
+[Fri Apr 17 21:25:20 CDT 2026] Running champsim_wisard_ablate_ghr64__649.fotonik3d_s-1176B
+[Fri Apr 17 21:25:20 CDT 2026] Running champsim_wisard_ablate_ghr64__649.fotonik3d_s-1B
+[Fri Apr 17 21:25:20 CDT 2026] Running champsim_wisard_ablate_ghr64__654.roms_s-842B
+[Fri Apr 17 22:11:16 CDT 2026] champsim_wisard_ablate_ghr64__638.imagick_s-10316B exit=0
+[Fri Apr 17 22:12:26 CDT 2026] champsim_wisard_ablate_ghr64__654.roms_s-842B exit=0
+[Fri Apr 17 22:13:50 CDT 2026] champsim_wisard_ablate_ghr64__603.bwaves_s-3699B exit=0
+[Fri Apr 17 22:17:35 CDT 2026] champsim_wisard_ablate_ghr64__621.wrf_s-575B exit=0
+[Fri Apr 17 22:21:06 CDT 2026] champsim_wisard_ablate_ghr64__649.fotonik3d_s-1B exit=0
+[Fri Apr 17 22:28:03 CDT 2026] champsim_wisard_ablate_ghr64__623.xalancbmk_s-700B exit=0
+[Fri Apr 17 22:35:17 CDT 2026] champsim_wisard_ablate_ghr64__607.cactuBSSN_s-2421B exit=0
+[Fri Apr 17 22:47:55 CDT 2026] champsim_wisard_ablate_ghr64__602.gcc_s-734B exit=0
+[Fri Apr 17 22:48:25 CDT 2026] champsim_wisard_ablate_ghr64__619.lbm_s-2676B exit=0
+[Fri Apr 17 22:49:22 CDT 2026] champsim_wisard_ablate_ghr64__605.mcf_s-665B exit=0
+[Fri Apr 17 22:57:06 CDT 2026] champsim_wisard_ablate_ghr64__649.fotonik3d_s-1176B exit=0
+[Fri Apr 17 22:57:06 CDT 2026] Batch exit=0
