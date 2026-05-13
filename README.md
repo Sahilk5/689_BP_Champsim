@@ -2,4 +2,4 @@ Project repo for Spring 2025 CSCE 689 Special Topics on Branch Prediction (taugh
 
 We are recreating a Weightless Neural Network based branch predictor based on [this paper](https://dl.acm.org/doi/10.1016/j.neucom.2023.126637)
 
-The final project write up can be found [here]()
+The final project write up can be found [here](https://tianfangguo.github.io/docs/689_final_report.pdf)
