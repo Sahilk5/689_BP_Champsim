@@ -94,6 +94,8 @@ public:
   unsigned pool_size() const { return static_cast<unsigned>(pool_positions_.size()); }
   // RAM i's tuple as pool positions, in mapping order (for coverage checks)
   const std::vector<std::vector<int>>& mapping() const { return mapping_; }
+  const std::vector<SourceSpec>& sources() const { return sources_; }
+  std::pair<uint16_t, uint8_t> pool_position(int pos) const { return pool_positions_[static_cast<std::size_t>(pos)]; }
 
 private:
   struct Group {

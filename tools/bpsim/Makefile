@@ -28,7 +28,7 @@ wnn_portable := $(OBJ)/portable/branch/wnn/wnn_core.o
 HP_BITS := 11 12 13 14 15 16 17
 
 .PHONY: all clean
-all: $(BIN)/bpsim $(BIN)/trace2stream $(BIN)/bpsim_nobmi2 $(foreach k,$(HP_BITS),$(BIN)/bpsim_hp$(k))
+all: $(BIN)/bpsim $(BIN)/trace2stream $(BIN)/wnn_info $(BIN)/bpsim_nobmi2 $(foreach k,$(HP_BITS),$(BIN)/bpsim_hp$(k))
 
 $(OBJ)/common/%.o: $(ROOT)/%.cc
 	@mkdir -p $(dir $@)
@@ -63,7 +63,11 @@ $(BIN)/trace2stream: $(OBJ)/common/tools/bpsim/trace2stream.o $(patsubst %.cc,$(
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
+$(BIN)/wnn_info: $(OBJ)/common/tools/bpsim/wnn_info.o $(wnn_bmi2)
+	@mkdir -p $(dir $@)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
 clean:
-	rm -rf $(OBJ) $(BIN)/bpsim $(BIN)/bpsim_nobmi2 $(BIN)/trace2stream $(foreach k,$(HP_BITS),$(BIN)/bpsim_hp$(k))
+	rm -rf $(OBJ) $(BIN)/bpsim $(BIN)/wnn_info $(BIN)/bpsim_nobmi2 $(BIN)/trace2stream $(foreach k,$(HP_BITS),$(BIN)/bpsim_hp$(k))
 
 -include $(shell find $(OBJ) -name '*.d' 2>/dev/null)
