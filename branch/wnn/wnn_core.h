@@ -133,6 +133,8 @@ private:
   std::vector<uint16_t> counters_;  // [ram][address][class]: class 0 = not taken, 1 = taken
   std::vector<uint32_t> addr_, last_addr_;
   std::vector<uint16_t> c_t_, c_nt_;
+  std::vector<uint32_t> cand_;
+  std::vector<uint16_t> st_, snt_;
   bool last_pred_ = false;
   uint32_t last_margin_ = 0;
   HistoryState spec_, real_;

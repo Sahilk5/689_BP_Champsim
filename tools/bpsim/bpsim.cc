@@ -121,6 +121,13 @@ public:
       predicted_target = 0;
     const bool cond_like = type == BRANCH_CONDITIONAL || type == BRANCH_OTHER;
     const bool mispredict = predicted_target != target || (cond_like && taken != final_pred);
+    count(type, taken, raw, final_pred, mispredict, ip, instr_index, pb);
+    btb_.update(ip, target, taken, type);
+    pred_.update(ip, target, taken, type);
+  }
+
+  void count(uint8_t type, bool taken, bool raw, bool final_pred, bool mispredict, uint64_t ip, uint64_t instr_index, PerBranch* pb)
+  {
     if (instr_index >= args_.warmup && instr_index < args_.warmup + args_.sim) {
       auto& tc = types_[type];
       ++tc.count;
@@ -137,7 +144,25 @@ public:
         }
       }
     }
-    btb_.update(ip, target, taken, type);
+  }
+
+  // Same as branch(), with the BTB's two outputs precomputed by bst_compact (v2 streams).
+  // ChampSim: predicted_target = final_pred ? btb_target : 0; mispredict if predicted_target != target,
+  // or (conditional-like and direction wrong).
+  void branch_precomputed(uint64_t ip, uint8_t type, bool taken, uint64_t target, bool always_taken, bool btb_right, uint64_t instr_index, PerBranch* pb)
+  {
+    const bool raw = pred_.predict(ip, 0, always_taken, type);
+    record_prediction(raw);
+    const bool final_pred = raw || always_taken;
+    const bool cond_like = type == BRANCH_CONDITIONAL || type == BRANCH_OTHER;
+    bool mispredict;
+    if (final_pred == taken)
+      mispredict = taken && !btb_right;
+    else if (final_pred)
+      mispredict = cond_like || !btb_right;
+    else
+      mispredict = true;
+    count(type, taken, raw, final_pred, mispredict, ip, instr_index, pb);
     pred_.update(ip, target, taken, type);
   }
 
@@ -211,7 +236,7 @@ struct MappedStream {
     ::madvise(base, size, MADV_SEQUENTIAL);
     auto* p = static_cast<const char*>(base);
     header = reinterpret_cast<const bst::Header*>(p);
-    if (std::memcmp(header->magic, bst::MAGIC, sizeof header->magic) != 0 || header->version != bst::VERSION)
+    if (std::memcmp(header->magic, bst::MAGIC, sizeof header->magic) != 0 || (header->version != bst::VERSION && header->version != bst::VERSION_COMPACT))
       throw std::runtime_error("not a branch stream (or wrong version): " + path);
     statics = reinterpret_cast<const bst::StaticEntry*>(p + header->header_bytes);
     records = reinterpret_cast<const uint64_t*>(statics + header->n_static);
@@ -249,7 +274,23 @@ int run(const Args& a)
       throw std::runtime_error("stream holds fewer instructions than warmup + sim");
     per_branch.resize(s.header->n_static);
     uint64_t index_plus_one = 0, next_override = 0;
-    for (uint64_t r = 0; r < s.header->n_records; ++r) {
+    const bool compact = s.header->version == bst::VERSION_COMPACT;
+    for (uint64_t r = 0; compact && r < s.header->n_records; ++r) {
+      const uint64_t rec = s.records[r];
+      index_plus_one += rec >> bst::DELTA_SHIFT_V2;
+      const uint64_t index = index_plus_one - 1;
+      if (index >= end)
+        break;
+      const auto id = rec & bst::ID_MASK;
+      const auto& st = s.statics[id];
+      const bool taken = rec & bst::TAKEN_BIT;
+      uint64_t target = 0;
+      if (taken)
+        target = (rec & bst::OVERRIDE_BIT) ? s.overrides[next_override++] : st.taken_target;
+      replay.branch_precomputed(st.ip, st.type, taken, target, rec & bst::ALWAYS_TAKEN_BIT, rec & bst::BTB_RIGHT_BIT, index,
+                                a.per_branch_out.empty() ? nullptr : &per_branch[id]);
+    }
+    for (uint64_t r = 0; !compact && r < s.header->n_records; ++r) {
       const uint64_t rec = s.records[r];
       index_plus_one += rec >> bst::DELTA_SHIFT;
       const uint64_t index = index_plus_one - 1;

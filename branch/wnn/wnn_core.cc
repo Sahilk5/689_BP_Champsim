@@ -239,6 +239,9 @@ Predictor::Predictor(Config cfg) : cfg_(std::move(cfg))
   last_addr_.assign(c.rams, 0);
   c_t_.assign(c.rams, 0);
   c_nt_.assign(c.rams, 0);
+  cand_.reserve(2 * std::size_t{c.rams} + 1);
+  st_.reserve(c.rams);
+  snt_.reserve(c.rams);
 }
 
 void Predictor::build_sources()
@@ -466,25 +469,29 @@ bool Predictor::decide(const uint32_t* addr)
   // Bleaching: the original raises b = thr+1, thr+2, ... up to max_count and stops at the first b
   // where #(c_t > b) != #(c_nt > b). Both counts are constant between consecutive stored counter
   // values, so it suffices to test b = thr+1 and every stored value above it, in ascending order.
-  std::vector<uint32_t> cand;
-  cand.reserve(2 * cfg_.rams + 1);
+  // With both arrays sorted, each count is one binary search.
+  st_.assign(c_t_.begin(), c_t_.end());
+  snt_.assign(c_nt_.begin(), c_nt_.end());
+  std::sort(st_.begin(), st_.end());
+  std::sort(snt_.begin(), snt_.end());
+  auto above = [](const std::vector<uint16_t>& v, uint32_t b) {
+    return static_cast<uint32_t>(v.end() - std::upper_bound(v.begin(), v.end(), b));
+  };
+  std::vector<uint32_t>& cand = cand_;  // reused buffer: ties are frequent on some traces
+  cand.clear();
   cand.push_back(thr + 1);
-  for (uint32_t i = 0; i < cfg_.rams; ++i) {
-    if (c_t_[i] > thr + 1)
-      cand.push_back(c_t_[i]);
-    if (c_nt_[i] > thr + 1)
-      cand.push_back(c_nt_[i]);
-  }
+  for (uint16_t v : st_)
+    if (v > thr + 1)
+      cand.push_back(v);
+  for (uint16_t v : snt_)
+    if (v > thr + 1)
+      cand.push_back(v);
   std::sort(cand.begin(), cand.end());
   cand.erase(std::unique(cand.begin(), cand.end()), cand.end());
   for (uint32_t b : cand) {
     if (b > max_count_)
       break;
-    uint32_t t = 0, nt = 0;
-    for (uint32_t i = 0; i < cfg_.rams; ++i) {
-      t += c_t_[i] > b;
-      nt += c_nt_[i] > b;
-    }
+    const uint32_t t = above(st_, b), nt = above(snt_, b);
     if (t != nt) {
       uint64_t steps = b - thr;
       stats_.bleach_steps_sum += steps;

@@ -21,7 +21,8 @@ constexpr const char* TYPE_NAMES[7] = {"BRANCH_DIRECT_JUMP", "BRANCH_INDIRECT", 
                                        "BRANCH_INDIRECT_CALL", "BRANCH_RETURN", "BRANCH_OTHER"};
 
 constexpr char MAGIC[8] = {'B', 'S', 'T', 'R', 'E', 'A', 'M', '1'};
-constexpr uint32_t VERSION = 1;
+constexpr uint32_t VERSION = 1;          // full stream: branch and BTB-touch records (trace2stream)
+constexpr uint32_t VERSION_COMPACT = 2;  // branch records only, with precomputed BTB outcomes (bst_compact)
 
 struct Header {
   char magic[8];
@@ -49,7 +50,14 @@ constexpr uint64_t ID_MASK = (1ULL << 28) - 1;  // bits 0-27: static id
 constexpr uint64_t TOUCH_BIT = 1ULL << 28;      // non-branch BTB lookup in a branch's group
 constexpr uint64_t TAKEN_BIT = 1ULL << 29;
 constexpr uint64_t OVERRIDE_BIT = 1ULL << 30;   // taken target differs from StaticEntry::taken_target
-constexpr int DELTA_SHIFT = 32;                 // bits 32-63: instructions since the previous record
+constexpr int DELTA_SHIFT = 32;                 // bits 32-63: instructions since the previous record (v1)
+
+// Compact format (v2). The BTB's outputs never depend on the direction predictor (its state changes
+// only through lookups and updates driven by the trace), so bst_compact replays basic_btb once and
+// stores, per branch, the two facts ChampSim's misprediction rule needs:
+constexpr uint64_t ALWAYS_TAKEN_BIT = 1ULL << 31;  // BTB returned always_taken (prediction forced taken)
+constexpr uint64_t BTB_RIGHT_BIT = 1ULL << 32;     // BTB target == actual target (taken), or == 0 (not taken)
+constexpr int DELTA_SHIFT_V2 = 33;                 // bits 33-63: instructions since the previous branch
 
 inline uint64_t make_record(uint64_t id, bool touch, bool taken, bool override_target, uint32_t delta)
 {
