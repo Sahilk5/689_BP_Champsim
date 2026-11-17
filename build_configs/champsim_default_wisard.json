@@ -1,0 +1,8 @@
+{
+  "executable_name": "champsim_default_wisard",
+  "ooo_cpu": [
+    {
+      "branch_predictor": "wisard"
+    }
+  ]
+}

@@ -1,0 +1,165 @@
+{
+  "name": "mpp_v2",
+  "description": "Bit-exact replica of Sahil Kaushal's wisard_mpp_v2 (origin/sahil/abalation_v1): the original pool plus MODHIST, GHISTPATH, BLURRYPATH, RECENCYPOS and IMLI-lite bits, one flat seed-67 mapping over 2303 positions.",
+  "geometry": {
+    "rams": 64,
+    "tuple_bits": 10,
+    "counter_bits": 8
+  },
+  "history": {
+    "policy": "spec_every_call",
+    "types": "all",
+    "ghr_length": 24
+  },
+  "lhts": [
+    {
+      "entries": 1024,
+      "length": 24
+    },
+    {
+      "entries": 1024,
+      "length": 16
+    },
+    {
+      "entries": 1024,
+      "length": 9
+    },
+    {
+      "entries": 1024,
+      "length": 7
+    },
+    {
+      "entries": 1024,
+      "length": 5
+    }
+  ],
+  "path_history": {
+    "bits_per_branch": 8,
+    "length": 64
+  },
+  "pool": [
+    {
+      "source": "pc",
+      "width": 24,
+      "copies": 24
+    },
+    {
+      "source": "ghr",
+      "width": 24,
+      "copies": 12
+    },
+    {
+      "source": "pc_xor_ghr",
+      "width": 24,
+      "copies": 12
+    },
+    {
+      "source": "lhr",
+      "table": 0,
+      "width": 24,
+      "copies": 8
+    },
+    {
+      "source": "lhr",
+      "table": 1,
+      "width": 16,
+      "copies": 8
+    },
+    {
+      "source": "lhr",
+      "table": 2,
+      "width": 9,
+      "copies": 8
+    },
+    {
+      "source": "lhr",
+      "table": 3,
+      "width": 7,
+      "copies": 6
+    },
+    {
+      "source": "lhr",
+      "table": 4,
+      "width": 5,
+      "copies": 12
+    },
+    {
+      "source": "gphr",
+      "width": 64,
+      "copies": 8
+    },
+    {
+      "source": "modhist5",
+      "width": 8
+    },
+    {
+      "source": "modhist7",
+      "width": 9
+    },
+    {
+      "source": "ghistpath",
+      "shift": 3,
+      "ghr_bits": 24,
+      "width": 24
+    },
+    {
+      "source": "ghistpath",
+      "shift": 5,
+      "ghr_bits": 24,
+      "width": 24
+    },
+    {
+      "source": "ghistpath",
+      "shift": 7,
+      "ghr_bits": 24,
+      "width": 24
+    },
+    {
+      "source": "blurry",
+      "shift": 2,
+      "ghr_bits": 24,
+      "width": 22
+    },
+    {
+      "source": "blurry",
+      "shift": 3,
+      "ghr_bits": 24,
+      "width": 21
+    },
+    {
+      "source": "recencypos",
+      "width": 6
+    },
+    {
+      "source": "imli_nz",
+      "width": 1
+    },
+    {
+      "source": "imli",
+      "width": 6
+    }
+  ],
+  "mapping": {
+    "strategy": "flat_shuffle",
+    "seed": 67
+  },
+  "predict": {
+    "threshold": 0,
+    "tie": "bleach_linear",
+    "default": "not_taken"
+  },
+  "train": {
+    "side": "one",
+    "gate": "always",
+    "types": "all",
+    "decay_interval": 262144,
+    "decay": "halve"
+  },
+  "mpp_state": {
+    "recency_depth": 56,
+    "recency_buckets": 64,
+    "mod5_depth": 8,
+    "mod7_depth": 9,
+    "imli_bits": 6
+  }
+}

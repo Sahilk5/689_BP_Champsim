@@ -1,6 +1,10 @@
 #ifndef BRANCH_HASHED_PERCEPTRON_H
 #define BRANCH_HASHED_PERCEPTRON_H
 
+#ifndef HP_TABLE_BITS
+#define HP_TABLE_BITS 11
+#endif
+
 #include <array>
 #include <cstdint>
 #include <tuple>
@@ -17,13 +21,9 @@ class hashed_perceptron : champsim::modules::branch_predictor
   constexpr static std::size_t NTABLES = 12;         // this many tables
   constexpr static bits MAXHIST{232};                // maximum history length
   constexpr static bits MINHIST{3};                  // minimum history length (for table 1; table 0 is biases)
-  constexpr static std::size_t TABLE_SIZE = 1 << 11; //2KB
-  // constexpr static std::size_t TABLE_SIZE = 1 << 12; // 12-bit indices for the tables
-  // constexpr static std::size_t TABLE_SIZE = 1 << 13; //8KB
-  // constexpr static std::size_t TABLE_SIZE = 1 << 14; //16KB
-  // constexpr static std::size_t TABLE_SIZE = 1 << 15; //32KB
-  // constexpr static std::size_t TABLE_SIZE = 1 << 16; //64KB
-  // constexpr static std::size_t TABLE_SIZE = 1 << 17; //128KB
+  // Budget = NTABLES * TABLE_SIZE bytes (8-bit weights): HP_TABLE_BITS 11..17 gives 24KB..1536KB.
+  // Set at build time with -DHP_TABLE_BITS=<k> (default 11, the value hard-coded on main).
+  constexpr static std::size_t TABLE_SIZE = std::size_t{1} << HP_TABLE_BITS;
   constexpr static bits TABLE_INDEX_BITS{champsim::msl::lg2(TABLE_SIZE)};
   constexpr static int THRESHOLD = 1;
 
