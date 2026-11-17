@@ -25,7 +25,7 @@ wnn::wnn(O3_CPU* cpu) : champsim::modules::branch_predictor(cpu)
   std::cout << "wnn: config " << path << " (" << core->config().name << "), storage " << s.total_bits() << " bits\n";
 }
 
-bool wnn::predict_branch(champsim::address ip) { return core->predict(ip.to<uint64_t>()); }
+bool wnn::predict_branch(champsim::address ip, champsim::address, bool, uint8_t branch_type) { return core->predict(ip.to<uint64_t>(), branch_type); }
 
 void wnn::last_branch_result(champsim::address ip, champsim::address branch_target, bool taken, uint8_t branch_type)
 {
