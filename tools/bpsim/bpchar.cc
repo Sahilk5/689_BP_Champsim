@@ -5,9 +5,8 @@
 //   bimodal      one counter per static branch
 //   local<h>     one counter per (branch, its own last h outcomes),           h in LOCAL_LENGTHS
 //   global<h>    one counter per (branch, last h outcomes of all branches),   h in GLOBAL_LENGTHS
-// The tables are keyed by a 62-bit hash of (branch, history) and are large enough to be practically
-// unaliased; when a table runs out of probe slots it replaces an entry and counts an eviction
-// (reported, so aliasing can be checked). Global history includes every branch type, as the
+// The tables are keyed by a 62-bit hash of (branch, history) and grow as needed, so they are unaliased
+// up to 62-bit hash collisions; the summary reports how many patterns each table holds. Global history includes every branch type, as the
 // predictors under study use it. Counters start weakly not-taken (1 of 0..3).
 //
 // Usage: bpchar --stream F.bstc [--warmup W] [--sim S] --out branches.csv [--summary summary.json]
@@ -45,23 +44,41 @@ inline uint64_t mix(uint64_t x)
 }
 
 // Open-addressing table of 2-bit counters; slot = (62-bit key << 2) | counter, 0 = empty.
+// It doubles when half full, so it never evicts: every (branch, history) pattern keeps its own counter.
 class CounterTable
 {
   std::vector<uint64_t> slots_;
   uint64_t mask_;
 
+  void grow()
+  {
+    std::vector<uint64_t> old;
+    old.swap(slots_);
+    slots_.assign(old.size() * 2, 0);
+    mask_ = slots_.size() - 1;
+    for (uint64_t s : old)
+      if (s != 0) {
+        uint64_t i = mix(s >> 2) & mask_;
+        while (slots_[i] != 0)
+          i = (i + 1) & mask_;
+        slots_[i] = s;
+      }
+  }
+
 public:
-  uint64_t evictions = 0, entries = 0;
+  uint64_t evictions = 0, entries = 0;  // evictions stays 0 (kept for the summary format)
   explicit CounterTable(unsigned log2_slots) : slots_(std::size_t{1} << log2_slots, 0), mask_((uint64_t{1} << log2_slots) - 1) {}
 
-  // Returns a reference-like index to the slot for key (inserting with counter 1 if absent).
+  // Returns the slot for key, inserting it with counter 1 (weakly not taken) if absent.
   uint64_t& slot(uint64_t key)
   {
     key = (key | 1) & ((uint64_t{1} << 62) - 1);  // never 0
     const uint64_t tag = key << 2;
+    if (2 * (entries + 1) > slots_.size())
+      grow();
     uint64_t i = mix(key) & mask_;
-    for (unsigned probe = 0; probe < 16; ++probe) {
-      uint64_t& s = slots_[(i + probe) & mask_];
+    while (true) {
+      uint64_t& s = slots_[i];
       if (s == 0) {
         s = tag | 1;
         ++entries;
@@ -69,11 +86,8 @@ public:
       }
       if ((s & ~uint64_t{3}) == tag)
         return s;
+      i = (i + 1) & mask_;
     }
-    ++evictions;
-    uint64_t& s = slots_[i];
-    s = tag | 1;
-    return s;
   }
 };
 
@@ -136,12 +150,12 @@ int main(int argc, char** argv)
     const auto* statics = reinterpret_cast<const bst::StaticEntry*>(p + h.header_bytes);
     const auto* records = reinterpret_cast<const uint64_t*>(statics + h.n_static);
 
-    CounterTable bimodal(20);
+    CounterTable bimodal(16);
     std::vector<CounterTable> local, global;
     for (std::size_t k = 0; k < N_LOCAL; ++k)
-      local.emplace_back(22);
+      local.emplace_back(16);
     for (std::size_t k = 0; k < N_GLOBAL; ++k)
-      global.emplace_back(23);
+      global.emplace_back(16);
     std::vector<uint64_t> local_hist(h.n_static, 0);
     std::vector<int8_t> last_outcome(h.n_static, -1);
     std::vector<BranchStats> stats(h.n_static);
@@ -211,7 +225,12 @@ int main(int argc, char** argv)
         s << ", \"local" << LOCAL_LENGTHS[k] << "\": " << local[k].evictions;
       for (std::size_t k = 0; k < N_GLOBAL; ++k)
         s << ", \"global" << GLOBAL_LENGTHS[k] << "\": " << global[k].evictions;
-      s << "}, \"entries\": {\"global128\": " << global.back().entries << "}}\n";
+      s << "}, \"entries\": {\"bimodal\": " << bimodal.entries;
+      for (std::size_t k = 0; k < N_LOCAL; ++k)
+        s << ", \"local" << LOCAL_LENGTHS[k] << "\": " << local[k].entries;
+      for (std::size_t k = 0; k < N_GLOBAL; ++k)
+        s << ", \"global" << GLOBAL_LENGTHS[k] << "\": " << global[k].entries;
+      s << "}}\n";
     }
     ::munmap(base, size);
     return 0;

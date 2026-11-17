@@ -34,7 +34,7 @@
 namespace
 {
 struct Args {
-  std::string predictor, config, stream, trace, json_out, per_branch_out, dump_predictions;
+  std::string predictor, config, stream, trace, json_out, per_branch_out, dump_predictions, classes;
   uint64_t warmup = 50'000'000, sim = 100'000'000;
 };
 
@@ -66,12 +66,14 @@ Args parse(int argc, char** argv)
       a.per_branch_out = next();
     else if (k == "--dump-predictions")
       a.dump_predictions = next();
+    else if (k == "--classes")
+      a.classes = next();
     else
       throw std::runtime_error("unknown argument " + k);
   }
   if (a.predictor.empty() || (a.stream.empty() == a.trace.empty()))
     throw std::runtime_error("usage: bpsim --predictor P [--config C] (--stream F.bst | --trace T) [--warmup W] [--sim S] [--json OUT] "
-                             "[--per-branch OUT.csv] [--dump-predictions OUT.bin]");
+                             "[--per-branch OUT.csv] [--dump-predictions OUT.bin] [--classes IP_CLASS.csv]");
   return a;
 }
 
@@ -126,9 +128,34 @@ public:
     pred_.update(ip, target, taken, type);
   }
 
+  // Branch classes (scripts/characterize_branches.py): ip -> class id; conditional branches only.
+  void load_classes(const std::string& path)
+  {
+    std::ifstream f(path);
+    if (!f)
+      throw std::runtime_error("cannot open " + path);
+    std::string line;
+    std::getline(f, line);  // header
+    while (std::getline(f, line)) {
+      auto comma = line.find(',');
+      uint64_t ip = std::stoull(line.substr(0, comma), nullptr, 16);
+      unsigned c = static_cast<unsigned>(std::stoul(line.substr(comma + 1)));
+      class_of_[ip] = c;
+      if (c + 1 > n_classes_)
+        n_classes_ = c + 1;
+    }
+    class_counts_.assign(n_classes_ + 1, {0, 0});  // last slot: branches absent from the file
+  }
+
   void count(uint8_t type, bool taken, bool raw, bool final_pred, bool mispredict, uint64_t ip, uint64_t instr_index, PerBranch* pb)
   {
     if (instr_index >= args_.warmup && instr_index < args_.warmup + args_.sim) {
+      if (type == BRANCH_CONDITIONAL && !class_counts_.empty()) {
+        auto it = class_of_.find(ip);
+        auto& cc = class_counts_[it == class_of_.end() ? n_classes_ : it->second];
+        ++cc.first;
+        cc.second += raw != taken;
+      }
       auto& tc = types_[type];
       ++tc.count;
       tc.taken += taken;
@@ -184,7 +211,10 @@ public:
       << ", \"dir_mispredicts_final\": " << dir_mispredicts_final_ << ", \"mispredicts_champsim\": " << c.mispredicts << "},\n  \"mpki\": {\"conditional_dir\": "
       << static_cast<double>(dir_mispredicts_) / k << ", \"conditional_champsim\": " << static_cast<double>(c.mispredicts) / k << ", \"all_champsim\": " << static_cast<double>(total_mispredicts) / k
       << "},\n  \"total_branches\": " << total_branches << ",\n  \"predict_calls\": " << predict_calls_ << ",\n  \"prediction_digest\": \"" << std::hex << digest_
-      << std::dec << "\",\n  \"predictor_report\": " << pred_.report().details_json << ",\n  \"elapsed_s\": " << elapsed << "\n}\n";
+      << std::dec << "\",\n  \"per_class\": [";
+    for (std::size_t c = 0; c < class_counts_.size(); ++c)
+      o << (c ? ", " : "") << "[" << class_counts_[c].first << ", " << class_counts_[c].second << "]";
+    o << "],\n  \"predictor_report\": " << pred_.report().details_json << ",\n  \"elapsed_s\": " << elapsed << "\n}\n";
   }
 
 private:
@@ -208,6 +238,9 @@ private:
   std::array<TypeCount, 8> types_{};
   uint64_t dir_mispredicts_ = 0, dir_mispredicts_final_ = 0, predict_calls_ = 0;
   uint64_t digest_ = 0xcbf29ce484222325ULL;
+  std::unordered_map<uint64_t, unsigned> class_of_;
+  unsigned n_classes_ = 0;
+  std::vector<std::pair<uint64_t, uint64_t>> class_counts_;  // (executions, direction mispredicts) per class
   FILE* dump_ = nullptr;
   uint8_t dump_byte_ = 0;
   unsigned dump_bits_ = 0;
@@ -261,6 +294,8 @@ int run(const Args& a)
   auto pred = make_predictor(a.predictor, a.config);
   auto btb = make_basic_btb();
   Replay replay(*pred, *btb, a);
+  if (!a.classes.empty())
+    replay.load_classes(a.classes);
   const uint64_t end = a.warmup + a.sim;
   std::vector<PerBranch> per_branch;
   uint64_t roi = 0;
