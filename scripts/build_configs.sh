@@ -9,6 +9,9 @@ mkdir -p .cache/logs
 for cfg in "$@"; do
   name=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["executable_name"])' "$cfg")
   ./config.sh "$cfg" > ".cache/logs/config_${name}.log" 2>&1
+  # Branch-module objects are shared between configs; rebuild them so per-build flags
+  # (e.g. -DHP_TABLE_BITS) never leak from one binary into the next.
+  rm -f .csconfig/modules/branch/*/*.o
   if ! make -j"$(nproc)" CXXFLAGS="${EXTRA_CXXFLAGS:-}" > ".cache/logs/make_${name}.log" 2>&1; then
     echo "build failed: $cfg (see .cache/logs/make_${name}.log)" >&2; exit 1
   fi
