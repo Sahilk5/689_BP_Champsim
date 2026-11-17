@@ -212,8 +212,8 @@ public:
       << static_cast<double>(dir_mispredicts_) / k << ", \"conditional_champsim\": " << static_cast<double>(c.mispredicts) / k << ", \"all_champsim\": " << static_cast<double>(total_mispredicts) / k
       << "},\n  \"total_branches\": " << total_branches << ",\n  \"predict_calls\": " << predict_calls_ << ",\n  \"prediction_digest\": \"" << std::hex << digest_
       << std::dec << "\",\n  \"per_class\": [";
-    for (std::size_t c = 0; c < class_counts_.size(); ++c)
-      o << (c ? ", " : "") << "[" << class_counts_[c].first << ", " << class_counts_[c].second << "]";
+    for (std::size_t cls = 0; cls < class_counts_.size(); ++cls)
+      o << (cls ? ", " : "") << "[" << class_counts_[cls].first << ", " << class_counts_[cls].second << "]";
     o << "],\n  \"predictor_report\": " << pred_.report().details_json << ",\n  \"elapsed_s\": " << elapsed << "\n}\n";
   }
 
