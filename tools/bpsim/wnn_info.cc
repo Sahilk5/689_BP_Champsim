@@ -53,15 +53,16 @@ int main(int argc, char** argv)
     std::map<std::string, unsigned> width;
     for (std::size_t k = 0; k < p.sources().size(); ++k) {
       auto f = family(static_cast<uint16_t>(k));
-      width[f] = std::max(width[f], p.sources()[k].width);
+      width[f] = std::max(width[f], p.sources()[k].offset + p.sources()[k].width);
     }
     unsigned dup_rams = 0, wasted = 0;
     for (const auto& tuple : p.mapping()) {
       std::set<std::pair<std::string, unsigned>> distinct;
       for (int pos : tuple) {
         auto [src, bit] = p.pool_position(pos);
-        distinct.insert({family(src), bit});
-        covered[family(src)].insert(bit);
+        const unsigned pos_in_family = bit + p.sources()[src].offset;  // e.g. GHR bit 64+ for a second GHR word
+        distinct.insert({family(src), pos_in_family});
+        covered[family(src)].insert(pos_in_family);
       }
       if (distinct.size() < tuple.size()) {
         ++dup_rams;
