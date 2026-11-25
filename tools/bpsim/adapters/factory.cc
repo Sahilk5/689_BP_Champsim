@@ -9,6 +9,10 @@ std::unique_ptr<IPredictor> make_gshare();
 std::unique_ptr<IPredictor> make_perceptron();
 std::unique_ptr<IPredictor> make_hashed_perceptron();
 std::unique_ptr<IPredictor> make_wnn(const std::string& config_path);
+#ifdef WITH_TAGE
+std::unique_ptr<IPredictor> make_tage_scl_8k();
+std::unique_ptr<IPredictor> make_tage_scl_64k();
+#endif
 
 std::unique_ptr<IPredictor> make_predictor(const std::string& name, const std::string& config_path)
 {
@@ -31,5 +35,11 @@ std::unique_ptr<IPredictor> make_predictor(const std::string& name, const std::s
     return make_perceptron();
   if (name == "hashed_perceptron")
     return make_hashed_perceptron();
+#ifdef WITH_TAGE
+  if (name == "tage_scl_8k")
+    return make_tage_scl_8k();
+  if (name == "tage_scl_64k")
+    return make_tage_scl_64k();
+#endif
   throw std::runtime_error("unknown predictor " + name);
 }

@@ -59,6 +59,15 @@ $(BIN)/bpsim_nobmi2: $(OBJ)/common/tools/bpsim/bpsim.o $(common_obj) $(wnn_porta
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
+# Optional: TAGE-SC-L (run tools/bpsim/fetch_tage.sh first). Built with -w: third-party code.
+$(OBJ)/tage/%.o: $(ROOT)/%.cc
+	@mkdir -p $(dir $@)
+	$(CXX) --std=c++17 -O3 -w -DWITH_TAGE -DCHAMPSIM_MODULE $(INCLUDES) -I$(ROOT)/tools/bpsim/tage_shim -I$(ROOT)/.cache/third_party/tage -MMD -c -o $@ $<
+tage_obj := $(patsubst %,$(OBJ)/tage/tools/bpsim/adapters/%.o,factory adapter_tage_8k adapter_tage_64k)
+$(BIN)/bpsim_tage: $(OBJ)/common/tools/bpsim/bpsim.o $(filter-out %/factory.o,$(common_obj)) $(tage_obj) $(wnn_bmi2) $(patsubst %.cc,$(OBJ)/hp11/%.o,$(HP_SRC))
+	@mkdir -p $(dir $@)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
 $(BIN)/trace2stream: $(OBJ)/common/tools/bpsim/trace2stream.o $(patsubst %.cc,$(OBJ)/common/%.o,$(CHAMPSIM_SRC))
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
