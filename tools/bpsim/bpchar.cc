@@ -172,6 +172,8 @@ int main(int argc, char** argv)
       const auto id = rec & bst::ID_MASK;
       const bool taken = rec & bst::TAKEN_BIT;
       if (statics[id].type == CONDITIONAL) {
+        // The reference tables train during warmup too; only the counts are limited to the measured window.
+        // (Never write `roi && predict_and_update(...)`: short-circuiting skips the training.)
         const bool roi = index >= warmup;
         auto& b = stats[id];
         if (roi) {
@@ -181,18 +183,18 @@ int main(int argc, char** argv)
         }
         last_outcome[id] = taken;
         const uint64_t idh = mix(id + 1);
-        b.mis_bimodal += roi && predict_and_update(bimodal.slot(idh), taken) != taken;
+        b.mis_bimodal += (predict_and_update(bimodal.slot(idh), taken) != taken) && roi;
         for (std::size_t k = 0; k < N_LOCAL; ++k) {
           const unsigned len = LOCAL_LENGTHS[k];
           const uint64_t hist = len >= 64 ? local_hist[id] : (local_hist[id] & ((uint64_t{1} << len) - 1));
-          b.mis_local[k] += roi && predict_and_update(local[k].slot(mix(idh ^ (hist * 0x9E3779B97F4A7C15ULL) ^ len)), taken) != taken;
+          b.mis_local[k] += (predict_and_update(local[k].slot(mix(idh ^ (hist * 0x9E3779B97F4A7C15ULL) ^ len)), taken) != taken) && roi;
         }
         for (std::size_t k = 0; k < N_GLOBAL; ++k) {
           const unsigned len = GLOBAL_LENGTHS[k];
           uint64_t lo = len >= 64 ? ghist[0] : (ghist[0] & ((uint64_t{1} << len) - 1));
           uint64_t hi = len > 64 ? (len >= 128 ? ghist[1] : (ghist[1] & ((uint64_t{1} << (len - 64)) - 1))) : 0;
           const uint64_t key = mix(idh ^ mix(lo ^ 0x51) ^ mix(hi ^ 0xA7) ^ len);
-          b.mis_global[k] += roi && predict_and_update(global[k].slot(key), taken) != taken;
+          b.mis_global[k] += (predict_and_update(global[k].slot(key), taken) != taken) && roi;
         }
         local_hist[id] = (local_hist[id] << 1) | (taken ? 1 : 0);
       }
