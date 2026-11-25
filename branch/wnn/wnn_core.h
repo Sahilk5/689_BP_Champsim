@@ -35,14 +35,16 @@ enum class Mode { Discriminators, Signed };
 enum class Fallback { None, Chooser };
 
 struct SourceSpec {
-  std::string source;    // pc, ghr, pc_xor_ghr, lhr, gphr, modhist5, modhist7, ghistpath, blurry, recencypos, imli_nz, imli, btype, folded_ghr
+  std::string source;    // pc, ghr, pc_xor_ghr, lhr, gphr, modhist5, modhist7, ghistpath, blurry, recencypos, imli_nz, imli, btype, folded_ghr,
+                         // pc_fold_ghr, pc_fold_lhr, pc_fold_path: folded pc xor a folded history window (hashing, not raw bits)
   unsigned width = 0;    // bits taken from the source (<= 64)
   unsigned shift = 0;    // pc / pc_xor_ghr: right shift of ip; ghistpath: left shift of ghr; blurry: right shift of ghr
   unsigned offset = 0;   // ghr / gphr / folded_ghr: first history bit
   unsigned table = 0;    // lhr: which local history table
   unsigned ghr_bits = 0; // ghistpath / blurry: truncate ghr to this many bits first (0 = whole ghr)
   unsigned pc_bits = 24; // ghistpath: pc bits xored in
-  unsigned length = 0;   // folded_ghr: history bits folded (xor) into `width` bits
+  unsigned length = 0;   // folded_ghr, pc_fold_*: history bits folded (xor) into `width` bits
+  unsigned salt = 0;     // pc_fold_*: rotate the folded history by this many bits, so RAMs differ
   unsigned copies = 1;   // replication in the input pool (flat mapping)
   double weight = 1.0;   // sampling weight (weighted and coverage mappings)
   bool operator==(const SourceSpec& o) const;  // equal as a computed word (ignores copies and weight)
@@ -65,7 +67,8 @@ struct Config {
   unsigned mod5_depth = 8, mod7_depth = 9;
   unsigned imli_bits = 6;
   std::vector<SourceSpec> pool;
-  std::string mapping = "flat_shuffle";  // flat_shuffle | weighted | coverage | structured
+  std::string mapping = "flat_shuffle";  // flat_shuffle | weighted | coverage | structured | explicit
+  std::vector<std::vector<int>> tuples;  // explicit mapping: pool positions of each RAM's tuple
   uint32_t seed = 67;
   unsigned structured_pc_bits = 4, structured_window_min = 4, structured_window_max = 64;
   unsigned base_threshold = 0;
@@ -115,7 +118,7 @@ public:
   std::pair<uint16_t, uint8_t> pool_position(int pos) const { return pool_positions_[static_cast<std::size_t>(pos)]; }
 
 private:
-  enum class Kind : uint8_t { Pc, Ghr, PcXorGhr, Lhr, Gphr, Modhist5, Modhist7, Ghistpath, Blurry, Recencypos, ImliNz, Imli, Btype, FoldedGhr };
+  enum class Kind : uint8_t { Pc, Ghr, PcXorGhr, Lhr, Gphr, Modhist5, Modhist7, Ghistpath, Blurry, Recencypos, ImliNz, Imli, Btype, FoldedGhr, PcFoldGhr, PcFoldLhr, PcFoldPath };
   struct Group {
     uint16_t source;
     uint8_t shift;

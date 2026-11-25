@@ -14,9 +14,14 @@ int main(int argc, char** argv)
 {
   try {
     std::string path;
+    bool dump = false;
     long rams = -1, tuple_bits = -1, counter_bits = -1, seed = -1;
     for (int i = 1; i < argc; ++i) {
       std::string k = argv[i];
+      if (k == "--dump-tuples") {
+        dump = true;
+        continue;
+      }
       if (i + 1 >= argc)
         throw std::runtime_error("missing value for " + k);
       std::string v = argv[++i];
@@ -43,6 +48,17 @@ int main(int argc, char** argv)
     if (seed >= 0)
       cfg.seed = static_cast<uint32_t>(seed);
     wnn_core::Predictor p(cfg);
+    if (dump) {  // the mapping as pool positions, one list per RAM (input format of mapping.strategy "explicit")
+      std::cout << "[";
+      for (std::size_t i = 0; i < p.mapping().size(); ++i) {
+        std::cout << (i ? ",[" : "[");
+        for (std::size_t b = 0; b < p.mapping()[i].size(); ++b)
+          std::cout << (b ? "," : "") << p.mapping()[i][b];
+        std::cout << "]";
+      }
+      std::cout << "]\n";
+      return 0;
+    }
     const auto s = p.storage();
 
     auto family = [&](uint16_t src) {

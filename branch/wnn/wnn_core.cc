@@ -77,7 +77,7 @@ const std::set<std::string> MPP_SOURCES = {"modhist5", "modhist7", "recencypos",
 bool SourceSpec::operator==(const SourceSpec& o) const
 {
   return source == o.source && width == o.width && shift == o.shift && offset == o.offset && table == o.table && ghr_bits == o.ghr_bits && pc_bits == o.pc_bits
-         && length == o.length;
+         && length == o.length && salt == o.salt;
 }
 
 Config Config::from_json_text(const std::string& text)
@@ -126,7 +126,7 @@ Config Config::from_json_text(const std::string& text)
     c.imli_bits = get_or(m, "imli_bits", c.imli_bits);
   }
   for (const auto& s : j.at("pool")) {
-    check_keys(s, {"source", "width", "shift", "offset", "table", "ghr_bits", "pc_bits", "length", "copies", "weight"}, "pool[]");
+    check_keys(s, {"source", "width", "shift", "offset", "table", "ghr_bits", "pc_bits", "length", "salt", "copies", "weight"}, "pool[]");
     SourceSpec sp;
     sp.source = s.at("source").get<std::string>();
     sp.width = s.at("width").get<unsigned>();
@@ -136,13 +136,15 @@ Config Config::from_json_text(const std::string& text)
     sp.ghr_bits = get_or(s, "ghr_bits", 0u);
     sp.pc_bits = get_or(s, "pc_bits", 24u);
     sp.length = get_or(s, "length", 0u);
+    sp.salt = get_or(s, "salt", 0u);
     sp.copies = get_or(s, "copies", 1u);
     sp.weight = get_or(s, "weight", 1.0);
     c.pool.push_back(sp);
   }
   if (j.contains("mapping")) {
     const auto& m = j.at("mapping");
-    check_keys(m, {"strategy", "seed", "pc_bits", "window_min", "window_max"}, "mapping");
+    check_keys(m, {"strategy", "seed", "pc_bits", "window_min", "window_max", "tuples"}, "mapping");
+    c.tuples = get_or(m, "tuples", c.tuples);
     c.mapping = get_or<std::string>(m, "strategy", c.mapping);
     c.seed = get_or(m, "seed", c.seed);
     c.structured_pc_bits = get_or(m, "pc_bits", c.structured_pc_bits);
@@ -285,7 +287,10 @@ void Predictor::build_sources()
                                                        {"imli_nz", Kind::ImliNz},
                                                        {"imli", Kind::Imli},
                                                        {"btype", Kind::Btype},
-                                                       {"folded_ghr", Kind::FoldedGhr}};
+                                                       {"folded_ghr", Kind::FoldedGhr},
+                                                       {"pc_fold_ghr", Kind::PcFoldGhr},
+                                                       {"pc_fold_lhr", Kind::PcFoldLhr},
+                                                       {"pc_fold_path", Kind::PcFoldPath}};
   const Config& c = cfg_;
   for (const auto& s : c.pool) {
     auto it = std::find(sources_.begin(), sources_.end(), s);
@@ -310,6 +315,12 @@ void Predictor::build_sources()
         throw std::runtime_error("ghr_bits beyond ghr_length");
       if (s.source == "folded_ghr" && (s.length == 0 || s.offset + s.length > c.ghr_length))
         throw std::runtime_error("folded_ghr needs 0 < offset + length <= ghr_length");
+      if (s.source == "pc_fold_ghr" && s.offset + s.length > c.ghr_length)
+        throw std::runtime_error("pc_fold_ghr beyond ghr_length");
+      if (s.source == "pc_fold_lhr" && (s.table >= c.lhts.size() || s.length > c.lhts[s.table].length))
+        throw std::runtime_error("pc_fold_lhr refers to a missing or shorter table");
+      if (s.source == "pc_fold_path" && s.offset + s.length > c.gphr_length)
+        throw std::runtime_error("pc_fold_path beyond path history length");
       if (s.source == "btype" && s.width > 3)
         throw std::runtime_error("btype has 3 bits");
       sources_.push_back(s);
@@ -456,6 +467,17 @@ void Predictor::build_mapping()
       for (unsigned b = p; filled < n; ++b)  // window narrower than the history share: use more PC bits
         mapping_[i][filled++] = entry_start[static_cast<std::size_t>(pc_e)] + static_cast<int>(b % pc_w);
     }
+  } else if (c.mapping == "explicit") {
+    if (c.tuples.size() != c.rams)
+      throw std::runtime_error("explicit mapping needs one tuple per RAM");
+    for (uint32_t i = 0; i < c.rams; ++i) {
+      if (c.tuples[i].size() != widths_[i])
+        throw std::runtime_error("explicit mapping: tuple size differs from the RAM's tuple bits");
+      for (int pos : c.tuples[i])
+        if (pos < 0 || static_cast<std::size_t>(pos) >= pool_positions_.size())
+          throw std::runtime_error("explicit mapping: pool position out of range");
+      mapping_[i] = c.tuples[i];
+    }
   } else {
     throw std::runtime_error("unknown mapping strategy " + c.mapping);
   }
@@ -550,6 +572,22 @@ bool Predictor::passes(TypeFilter f, bool conditional, bool taken)
   return true;
 }
 
+namespace
+{
+inline uint64_t fold_word(uint64_t v, unsigned bits, unsigned width)
+{
+  uint64_t r = 0;
+  for (unsigned done = 0; done < bits; done += width)
+    r ^= (done < 64 ? v >> done : 0) & mask_bits(std::min(width, bits - done));
+  return r & mask_bits(width);
+}
+inline uint64_t rotl_width(uint64_t v, unsigned r, unsigned width)
+{
+  r %= width;
+  return r == 0 ? v : ((v << r) | (v >> (width - r))) & mask_bits(width);
+}
+}  // namespace
+
 void Predictor::compute_words(uint64_t ip, uint8_t branch_type, const HistoryState& h)
 {
   const uint32_t pc_shifted = static_cast<uint32_t>((ip >> 2) & 0xFFFFFF);
@@ -604,6 +642,24 @@ void Predictor::compute_words(uint64_t ip, uint8_t branch_type, const HistorySta
     case Kind::Btype:
       v = branch_type & m;
       break;
+    case Kind::PcFoldGhr: {
+      uint64_t f = 0;
+      for (unsigned done = 0; done < s.length; done += s.width)
+        f ^= ghr_bits(h.ghr, s.offset + done, std::min(s.width, s.length - done));
+      v = (fold_word(ip >> s.shift, 48, s.width) ^ rotl_width(f, s.salt, s.width)) & m;
+      break;
+    }
+    case Kind::PcFoldLhr: {
+      const auto& t = lht_[s.table];
+      const uint64_t f = fold_word(t[ip & (t.size() - 1)] & mask_bits(s.length), s.length, s.width);
+      v = (fold_word(ip >> s.shift, 48, s.width) ^ rotl_width(f, s.salt, s.width)) & m;
+      break;
+    }
+    case Kind::PcFoldPath: {
+      const uint64_t f = fold_word((gphr_ >> s.offset) & mask_bits(s.length), s.length, s.width);
+      v = (fold_word(ip >> s.shift, 48, s.width) ^ rotl_width(f, s.salt, s.width)) & m;
+      break;
+    }
     case Kind::FoldedGhr:
       for (unsigned done = 0; done < s.length; done += s.width)
         v ^= ghr_bits(h.ghr, s.offset + done, std::min(s.width, s.length - done));
