@@ -45,7 +45,7 @@ struct SourceSpec {
   unsigned offset = 0;   // ghr / gphr / folded_ghr: first history bit
   unsigned table = 0;    // lhr: which local history table
   unsigned ghr_bits = 0; // ghistpath / blurry: truncate ghr to this many bits first (0 = whole ghr)
-  unsigned pc_bits = 24; // ghistpath: pc bits xored in
+  unsigned pc_bits = 0;  // ghistpath: pc bits xored in (0 = 24); pc_fold_*: pc bits folded (0 = 48)
   unsigned length = 0;   // folded_ghr, pc_fold_*: history bits folded (xor) into `width` bits
   unsigned salt = 0;     // pc_fold_*: rotate the folded history by this many bits, so RAMs differ
   unsigned copies = 1;   // replication in the input pool (flat mapping)

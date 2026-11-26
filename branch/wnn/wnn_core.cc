@@ -141,7 +141,7 @@ Config Config::from_json_text(const std::string& text)
     sp.offset = get_or(s, "offset", 0u);
     sp.table = get_or(s, "table", 0u);
     sp.ghr_bits = get_or(s, "ghr_bits", 0u);
-    sp.pc_bits = get_or(s, "pc_bits", 24u);
+    sp.pc_bits = get_or(s, "pc_bits", 0u);
     sp.length = get_or(s, "length", 0u);
     sp.salt = get_or(s, "salt", 0u);
     sp.copies = get_or(s, "copies", 1u);
@@ -643,7 +643,7 @@ void Predictor::compute_words(uint64_t ip, uint8_t branch_type, const HistorySta
     }
     case Kind::Ghistpath: {
       uint64_t g = ghr_bits(h.ghr, 0, s.ghr_bits ? s.ghr_bits : std::min(cfg_.ghr_length, 64u));
-      v = ((g << s.shift) ^ (ip & mask_bits(s.pc_bits))) & m;
+      v = ((g << s.shift) ^ (ip & mask_bits(s.pc_bits ? s.pc_bits : 24))) & m;
       break;
     }
     case Kind::Blurry: {
@@ -667,18 +667,18 @@ void Predictor::compute_words(uint64_t ip, uint8_t branch_type, const HistorySta
       uint64_t f = 0;
       for (unsigned done = 0; done < s.length; done += s.width)
         f ^= ghr_bits(h.ghr, s.offset + done, std::min(s.width, s.length - done));
-      v = (fold_word(ip >> s.shift, 48, s.width) ^ rotl_width(f, s.salt, s.width)) & m;
+      v = (fold_word(ip >> s.shift, s.pc_bits ? s.pc_bits : 48, s.width) ^ rotl_width(f, s.salt, s.width)) & m;
       break;
     }
     case Kind::PcFoldLhr: {
       const auto& t = lht_[s.table];
       const uint64_t f = fold_word(t[ip & (t.size() - 1)] & mask_bits(s.length), s.length, s.width);
-      v = (fold_word(ip >> s.shift, 48, s.width) ^ rotl_width(f, s.salt, s.width)) & m;
+      v = (fold_word(ip >> s.shift, s.pc_bits ? s.pc_bits : 48, s.width) ^ rotl_width(f, s.salt, s.width)) & m;
       break;
     }
     case Kind::PcFoldPath: {
       const uint64_t f = fold_word((gphr_ >> s.offset) & mask_bits(s.length), s.length, s.width);
-      v = (fold_word(ip >> s.shift, 48, s.width) ^ rotl_width(f, s.salt, s.width)) & m;
+      v = (fold_word(ip >> s.shift, s.pc_bits ? s.pc_bits : 48, s.width) ^ rotl_width(f, s.salt, s.width)) & m;
       break;
     }
     case Kind::FoldedGhr:
