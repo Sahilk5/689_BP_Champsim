@@ -83,7 +83,8 @@ bool SourceSpec::operator==(const SourceSpec& o) const
 Config Config::from_json_text(const std::string& text)
 {
   json j = json::parse(text);
-  check_keys(j, {"name", "description", "geometry", "history", "lhts", "path_history", "mpp_state", "pool", "mapping", "predict", "train", "mode", "fallback"},
+  check_keys(j, {"name", "description", "geometry", "history", "lhts", "path_history", "mpp_state", "runlen", "pool", "mapping", "predict", "train", "mode",
+                 "fallback"},
              "config");
   Config c;
   c.name = get_or<std::string>(j, "name", c.name);
@@ -124,6 +125,12 @@ Config Config::from_json_text(const std::string& text)
     c.mod5_depth = get_or(m, "mod5_depth", c.mod5_depth);
     c.mod7_depth = get_or(m, "mod7_depth", c.mod7_depth);
     c.imli_bits = get_or(m, "imli_bits", c.imli_bits);
+  }
+  if (j.contains("runlen")) {
+    const auto& r = j.at("runlen");
+    check_keys(r, {"entries", "bits"}, "runlen");
+    c.runlen_entries = get_or(r, "entries", c.runlen_entries);
+    c.runlen_bits = get_or(r, "bits", c.runlen_bits);
   }
   for (const auto& s : j.at("pool")) {
     check_keys(s, {"source", "width", "shift", "offset", "table", "ghr_bits", "pc_bits", "length", "salt", "copies", "weight"}, "pool[]");
@@ -232,11 +239,19 @@ Predictor::Predictor(Config cfg) : cfg_(std::move(cfg))
   signed_max_ = (1 << (c.counter_bits - 1)) - 1;
   signed_min_ = -(1 << (c.counter_bits - 1));
 
+  bool uses_runlen = false;
   for (const auto& s : c.pool) {
     if (s.width == 0 || s.width > 64)
       throw std::runtime_error("source width must be 1..64");
     if (MPP_SOURCES.count(s.source))
       uses_mpp_ = true;
+    uses_runlen = uses_runlen || s.source == "runlen" || s.source == "runlen_match";
+    uses_runlen_match_ = uses_runlen_match_ || s.source == "runlen_match";
+  }
+  if (uses_runlen) {
+    if (!pow2(c.runlen_entries) || c.runlen_bits == 0 || c.runlen_bits > 16)
+      throw std::runtime_error("runlen needs power-of-two entries and bits 1..16");
+    runlen_.assign(c.runlen_entries, RunEntry{});
   }
   for (HistoryState* h : {&spec_, &real_}) {
     h->ghr.assign((c.ghr_length + 63) / 64, 0);
@@ -290,7 +305,9 @@ void Predictor::build_sources()
                                                        {"folded_ghr", Kind::FoldedGhr},
                                                        {"pc_fold_ghr", Kind::PcFoldGhr},
                                                        {"pc_fold_lhr", Kind::PcFoldLhr},
-                                                       {"pc_fold_path", Kind::PcFoldPath}};
+                                                       {"pc_fold_path", Kind::PcFoldPath},
+                                                       {"runlen", Kind::Runlen},
+                                                       {"runlen_match", Kind::RunlenMatch}};
   const Config& c = cfg_;
   for (const auto& s : c.pool) {
     auto it = std::find(sources_.begin(), sources_.end(), s);
@@ -323,6 +340,10 @@ void Predictor::build_sources()
         throw std::runtime_error("pc_fold_path beyond path history length");
       if (s.source == "btype" && s.width > 3)
         throw std::runtime_error("btype has 3 bits");
+      if (s.source == "runlen" && s.width > c.runlen_bits + 1)
+        throw std::runtime_error("runlen has runlen_bits + 1 bits");
+      if (s.source == "runlen_match" && s.width > 2)
+        throw std::runtime_error("runlen_match has 2 bits");
       sources_.push_back(s);
       kinds_.push_back(n->second);
     }
@@ -664,6 +685,17 @@ void Predictor::compute_words(uint64_t ip, uint8_t branch_type, const HistorySta
       for (unsigned done = 0; done < s.length; done += s.width)
         v ^= ghr_bits(h.ghr, s.offset + done, std::min(s.width, s.length - done));
       break;
+    case Kind::Runlen: {
+      const RunEntry& e = runlen_[ip & (runlen_.size() - 1)];
+      v = (uint64_t{e.cur} | (uint64_t{e.dir} << cfg_.runlen_bits)) & m;
+      break;
+    }
+    case Kind::RunlenMatch: {
+      const RunEntry& e = runlen_[ip & (runlen_.size() - 1)];
+      const bool match = e.cur != 0 && e.cur < mask_bits(cfg_.runlen_bits) && e.cur == e.prev[e.dir];
+      v = (uint64_t{match} | (uint64_t{e.dir} << 1)) & m;
+      break;
+    }
     }
     words_[k] = v;
   }
@@ -972,6 +1004,21 @@ void Predictor::update(uint64_t ip, uint64_t target, bool taken, uint8_t branch_
   }
   if (passes(c.path_types, conditional, taken))
     gphr_ = ((gphr_ << c.gphr_bits_per_branch) ^ (ip & mask_bits(c.gphr_bits_per_branch))) & mask_bits(c.gphr_length);
+  if (!runlen_.empty() && conditional) {  // run lengths are per conditional branch, updated at resolve (not speculative)
+    RunEntry& e = runlen_[ip & (runlen_.size() - 1)];
+    const uint8_t t = taken ? 1 : 0;
+    if (e.cur == 0) {
+      e.dir = t;
+      e.cur = 1;
+    } else if (t == e.dir) {
+      if (e.cur < mask_bits(c.runlen_bits))
+        ++e.cur;
+    } else {
+      e.prev[e.dir] = e.cur;
+      e.dir = t;
+      e.cur = 1;
+    }
+  }
 }
 
 Storage Predictor::storage() const
@@ -997,6 +1044,8 @@ Storage Predictor::storage() const
     s.side_table_bits += uint64_t{c.fallback_entries} * 4;  // 2-bit bimodal + 2-bit chooser
   if (c.train_gate == TrainGate::Adaptive)
     s.side_table_bits += 8 + 7;  // threshold and its training counter
+  if (!runlen_.empty())  // current run length and direction; plus the previous run length per outcome if runlen_match is used
+    s.runlen_bits = uint64_t{c.runlen_entries} * (1 + c.runlen_bits * (uses_runlen_match_ ? 3 : 1));
   return s;
 }
 

@@ -22,7 +22,7 @@ public:
     std::ostringstream o;
     o << "{\"name\": \"" << p.config().name << "\", \"pool_positions\": " << p.pool_size() << ", \"storage_bits\": {\"discriminators\": " << s.discriminator_bits
       << ", \"local_history\": " << s.lht_bits << ", \"global_history\": " << s.global_history_bits << ", \"path_history\": " << s.path_history_bits
-      << ", \"mpp_state\": " << s.mpp_state_bits << ", \"side_tables\": " << s.side_table_bits << ", \"total\": " << s.total_bits() << "}, \"counter_reads_per_prediction\": " << 2 * p.config().rams
+      << ", \"mpp_state\": " << s.mpp_state_bits << ", \"run_length\": " << s.runlen_bits << ", \"side_tables\": " << s.side_table_bits << ", \"total\": " << s.total_bits() << "}, \"counter_reads_per_prediction\": " << 2 * p.config().rams
       << ", \"predict_calls\": " << st.predictions << ", \"ties\": " << st.ties << ", \"unresolved_ties\": " << st.unresolved_ties
       << ", \"bleach_steps_sum\": " << st.bleach_steps_sum << ", \"bleach_steps_max\": " << st.bleach_steps_max << ", \"trainings\": " << st.trainings << ", \"chooser_used_bimodal\": " << st.chooser_used_bimodal << "}";
     return {s.total_bits(), o.str()};

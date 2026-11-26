@@ -88,7 +88,7 @@ int main(int argc, char** argv)
     std::cout << "{\"name\": \"" << cfg.name << "\", \"rams\": " << cfg.rams << ", \"tuple_bits\": " << cfg.tuple_bits << ", \"counter_bits\": " << cfg.counter_bits
               << ", \"seed\": " << cfg.seed << ", \"pool_positions\": " << p.pool_size() << ",\n \"storage_bits\": {\"discriminators\": " << s.discriminator_bits
               << ", \"local_history\": " << s.lht_bits << ", \"global_history\": " << s.global_history_bits << ", \"path_history\": " << s.path_history_bits
-              << ", \"mpp_state\": " << s.mpp_state_bits << ", \"total\": " << s.total_bits() << "},\n \"storage_kib\": " << static_cast<double>(s.total_bits()) / 8192.0
+              << ", \"mpp_state\": " << s.mpp_state_bits << ", \"run_length\": " << s.runlen_bits << ", \"total\": " << s.total_bits() << "},\n \"storage_kib\": " << static_cast<double>(s.total_bits()) / 8192.0
               << ",\n \"coverage\": {";
     bool first = true;
     for (const auto& [f, bits] : covered) {

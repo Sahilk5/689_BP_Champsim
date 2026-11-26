@@ -37,6 +37,9 @@ enum class Fallback { None, Chooser };
 struct SourceSpec {
   std::string source;    // pc, ghr, pc_xor_ghr, lhr, gphr, modhist5, modhist7, ghistpath, blurry, recencypos, imli_nz, imli, btype, folded_ghr,
                          // pc_fold_ghr, pc_fold_lhr, pc_fold_path: folded pc xor a folded history window (hashing, not raw bits)
+                         // runlen: this branch's current run length (consecutive equal outcomes; raw bits) with its direction at bit runlen_bits
+                         // runlen_match: bit 0 = the current run has reached the length of this branch's previous run in the same
+                         //   direction (a comparator output, derived, not hashed), bit 1 = the run's direction
   unsigned width = 0;    // bits taken from the source (<= 64)
   unsigned shift = 0;    // pc / pc_xor_ghr: right shift of ip; ghistpath: left shift of ghr; blurry: right shift of ghr
   unsigned offset = 0;   // ghr / gphr / folded_ghr: first history bit
@@ -66,6 +69,7 @@ struct Config {
   unsigned recency_depth = 56, recency_buckets = 64;
   unsigned mod5_depth = 8, mod7_depth = 9;
   unsigned imli_bits = 6;
+  unsigned runlen_entries = 1024, runlen_bits = 10;  // per-PC run-length table (only built when a runlen source is used)
   std::vector<SourceSpec> pool;
   std::string mapping = "flat_shuffle";  // flat_shuffle | weighted | coverage | structured | explicit
   std::vector<std::vector<int>> tuples;  // explicit mapping: pool positions of each RAM's tuple
@@ -91,10 +95,10 @@ struct Config {
 };
 
 struct Storage {
-  uint64_t discriminator_bits = 0, lht_bits = 0, global_history_bits = 0, path_history_bits = 0, mpp_state_bits = 0, side_table_bits = 0;
+  uint64_t discriminator_bits = 0, lht_bits = 0, global_history_bits = 0, path_history_bits = 0, mpp_state_bits = 0, side_table_bits = 0, runlen_bits = 0;
   uint64_t total_bits() const
   {
-    return discriminator_bits + lht_bits + global_history_bits + path_history_bits + mpp_state_bits + side_table_bits;
+    return discriminator_bits + lht_bits + global_history_bits + path_history_bits + mpp_state_bits + side_table_bits + runlen_bits;
   }
 };
 
@@ -118,7 +122,7 @@ public:
   std::pair<uint16_t, uint8_t> pool_position(int pos) const { return pool_positions_[static_cast<std::size_t>(pos)]; }
 
 private:
-  enum class Kind : uint8_t { Pc, Ghr, PcXorGhr, Lhr, Gphr, Modhist5, Modhist7, Ghistpath, Blurry, Recencypos, ImliNz, Imli, Btype, FoldedGhr, PcFoldGhr, PcFoldLhr, PcFoldPath };
+  enum class Kind : uint8_t { Pc, Ghr, PcXorGhr, Lhr, Gphr, Modhist5, Modhist7, Ghistpath, Blurry, Recencypos, ImliNz, Imli, Btype, FoldedGhr, PcFoldGhr, PcFoldLhr, PcFoldPath, Runlen, RunlenMatch };
   struct Group {
     uint16_t source;
     uint8_t shift;
@@ -175,6 +179,13 @@ private:
   uint32_t imli_ = 0;
   uint64_t since_decay_ = 0;
   bool uses_mpp_ = false;
+  struct RunEntry {
+    uint16_t cur = 0;           // length of the current run (0 = never executed), saturating at 2^runlen_bits - 1
+    uint8_t dir = 0;            // the current run's outcome
+    uint16_t prev[2] = {0, 0};  // length of the last completed run of each outcome
+  };
+  std::vector<RunEntry> runlen_;
+  bool uses_runlen_match_ = false;
   std::vector<uint8_t> default_table_;  // bias_table: 2-bit counters; last_outcome: 1 bit
   std::vector<uint8_t> bimodal_, chooser_;
   unsigned theta_ = 0;  // adaptive training threshold
